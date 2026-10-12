@@ -1,0 +1,5 @@
+dash>=4.0
+plotly>=6.0
+pandas>=2.0
+pyarrow>=14.0
+wordcloud>=1.9
