@@ -49,8 +49,9 @@ builds the caches in `data/` the first time each page needs them.
 
 The `Dockerfile` builds every cache at image build time and keeps only what the app reads
 (about 400 MB); it serves the app with gunicorn on `$PORT`. `render.yaml` is a
-[Render](https://render.com) blueprint for it. The app uses about 1.1 GB of memory once every view
-has been opened.
+[Render](https://render.com) blueprint for it. Measured under gunicorn, the app uses about 1.0 GB
+of memory after heavy use of the default views and up to about 1.7 GB once many different faculty
+selections are cached (each is kept, up to 16), which fits the plan's 2 GB with one worker but not two.
 
 ```sh
 docker build -t cuni-theses .

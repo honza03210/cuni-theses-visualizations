@@ -3,7 +3,7 @@ services:
   - type: web
     name: cuni-theses-visualizations
     runtime: docker
-    plan: standard  # 2 GB of memory; the app uses about 1.1 GB once every view has been opened
+    plan: standard  # 2 GB of memory; the app uses 1.0-1.7 GB (measured), so keep one worker
     healthCheckPath: /
     envVars:
       - key: DASH_DEBUG

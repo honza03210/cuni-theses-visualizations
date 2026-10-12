@@ -11,5 +11,6 @@ RUN python prepare.py --clean
 
 ENV DASH_DEBUG=0 PORT=8050
 EXPOSE 8050
-# One worker with threads: each process caches the word tables (about 1.1 GB once all views are used).
+# One worker with threads: each process caches the word tables (measured 1.0-1.7 GB, depending on
+# how many faculty selections are cached), so a second worker would not fit in 2 GB.
 CMD gunicorn app:server --bind 0.0.0.0:${PORT} --workers 1 --threads 4 --timeout 120
