@@ -6,7 +6,7 @@ from dash import Input, Output, State, callback, dash_table, dcc, html
 
 from data import FACULTIES, MEASURES, load_theses, subset_for, yearly_stats
 from theme import CHROME, SERIES, base_layout
-from ui import control
+from ui import control, parse_query, url_store, url_sync
 
 dash.register_page(__name__, path="/", name="Thesis length", order=0, title="CUNI theses: length over time")
 
@@ -16,44 +16,56 @@ LAST_YEAR = int(THESES.year.max())  # the current, incomplete year
 MAX_COMPARED = 8
 
 
-layout = html.Div([
-    html.H1("How long are Charles University bachelor theses?"),
-    html.P([
-        "Length of bachelor theses defended at Charles University by year of defence. Data: ",
-        html.A("honza03210/cuni-bachelor-theses-style",
-               href="https://huggingface.co/datasets/honza03210/cuni-bachelor-theses-style"),
-        ".",
-    ], className="lede"),
-    html.Div([
-        control("Faculties", dcc.Dropdown(
-            id="faculties",
-            options=[{"label": name, "value": fac} for fac, name in sorted(FACULTIES.items(), key=lambda kv: kv[1])],
-            value=list(FACULTIES), multi=True, placeholder="Select faculties…",
-        ), wide=True),
-        control("Length", dcc.RadioItems(
-            id="measure", options=[{"label": label, "value": col} for col, label in MEASURES.items()],
-            value="body_n_words",
-        )),
-        control("Average", dcc.RadioItems(
-            id="stat", options=[{"label": "Mean", "value": "mean"}, {"label": "Median", "value": "median"}],
-            value="mean",
-        )),
-        control("View", dcc.RadioItems(
-            id="view", options=[{"label": "Selected faculties combined", "value": "combined"},
-                                {"label": "Compare faculties", "value": "compare"}],
-            value="combined",
-        )),
-    ], className="filters"),
-    html.P(id="note", className="note"),
-    dcc.Graph(id="chart", config={"displaylogo": False}),
-    html.Details([
-        html.Summary("Show data table"),
-        dash_table.DataTable(id="table", page_size=25, sort_action="native",
-                             style_as_list_view=True, css=[{"selector": ".dash-spreadsheet", "rule": "font-family: inherit"}]),
-    ]),
-    html.P(id="method", className="method"),
-    dcc.Store(id="slots", data={}),
-])
+SPEC = {
+    "faculties": ("list", list(FACULTIES), FACULTIES),
+    "measure": ("choice", "body_n_words", MEASURES),
+    "stat": ("choice", "mean", ("mean", "median")),
+    "view": ("choice", "combined", ("combined", "compare")),
+}
+
+
+def layout(**query):
+    """The page; settings in the URL query preset the controls."""
+    q = parse_query(query, SPEC)
+    return html.Div([
+        html.H1("How long are Charles University bachelor theses?"),
+        html.P([
+            "Length of bachelor theses defended at Charles University by year of defence. Data: ",
+            html.A("honza03210/cuni-bachelor-theses-style",
+                   href="https://huggingface.co/datasets/honza03210/cuni-bachelor-theses-style"),
+            ".",
+        ], className="lede"),
+        html.Div([
+            control("Faculties", dcc.Dropdown(
+                id="faculties",
+                options=[{"label": name, "value": fac} for fac, name in sorted(FACULTIES.items(), key=lambda kv: kv[1])],
+                value=q["faculties"], multi=True, placeholder="Select faculties…",
+            ), wide=True),
+            control("Length", dcc.RadioItems(
+                id="measure", options=[{"label": label, "value": col} for col, label in MEASURES.items()],
+                value=q["measure"],
+            )),
+            control("Average", dcc.RadioItems(
+                id="stat", options=[{"label": "Mean", "value": "mean"}, {"label": "Median", "value": "median"}],
+                value=q["stat"],
+            )),
+            control("View", dcc.RadioItems(
+                id="view", options=[{"label": "Selected faculties combined", "value": "combined"},
+                                    {"label": "Compare faculties", "value": "compare"}],
+                value=q["view"],
+            )),
+        ], className="filters"),
+        html.P(id="note", className="note"),
+        dcc.Graph(id="chart", config={"displaylogo": False}),
+        html.Details([
+            html.Summary("Show data table"),
+            dash_table.DataTable(id="table", page_size=25, sort_action="native",
+                                 style_as_list_view=True, css=[{"selector": ".dash-spreadsheet", "rule": "font-family: inherit"}]),
+        ]),
+        html.P(id="method", className="method"),
+        dcc.Store(id="slots", data={}),
+        url_store("length-url"),
+    ])
 
 
 @callback(Output("slots", "data"), Input("faculties", "value"), State("slots", "data"))
@@ -141,3 +153,6 @@ def update(slots, measure, stat, view, theme, selected):
               + f" Theses in all languages are included. {LAST_YEAR} is incomplete.")
     return fig, table.to_dict("records"), columns, note, method
 
+
+url_sync("length-url", SPEC, {"faculties": ("faculties", "value"), "measure": ("measure", "value"),
+                              "stat": ("stat", "value"), "view": ("view", "value")})

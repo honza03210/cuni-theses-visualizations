@@ -2,4 +2,7 @@ dash>=4.0
 plotly>=6.0
 pandas>=2.0
 pyarrow>=14.0
+duckdb>=1.1
 wordcloud>=1.9
+snowballstemmer>=2.2
+gunicorn>=22.0

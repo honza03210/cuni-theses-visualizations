@@ -1,9 +1,12 @@
 """Dash app: interactive visualizations of Charles University bachelor theses."""
 
+import os
+
 import dash
 from dash import Dash, Input, Output, clientside_callback, dcc, html
 
 app = Dash(__name__, use_pages=True, suppress_callback_exceptions=True, title="CUNI theses visualizations")
+server = app.server  # for WSGI servers: gunicorn app:server
 PAGES = list(dash.page_registry.values())
 
 
@@ -38,4 +41,4 @@ def highlight_nav(pathname):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("DASH_DEBUG", "1") == "1", port=int(os.environ.get("PORT", 8050)))

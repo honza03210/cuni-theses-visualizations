@@ -10,9 +10,16 @@ LESS = {"light": "#2a78d6", "dark": "#3987e5"}
 
 CHROME = {
     "light": {"ink": "#0b0b0b", "ink2": "#52514e", "muted": "#898781", "grid": "#e1e0d9", "axis": "#c3c2b7",
-              "band": "rgba(42,120,214,0.14)", "partial": "rgba(137,135,129,0.08)", "surface": "#fcfcfb"},
+              "band": "rgba(42,120,214,0.14)", "partial": "rgba(137,135,129,0.08)", "surface": "#fcfcfb",
+              "interval": "rgba(137,135,129,0.22)"},
     "dark": {"ink": "#ffffff", "ink2": "#c3c2b7", "muted": "#898781", "grid": "#2c2c2a", "axis": "#383835",
-             "band": "rgba(57,135,229,0.20)", "partial": "rgba(137,135,129,0.10)", "surface": "#1a1a19"},
+             "band": "rgba(57,135,229,0.20)", "partial": "rgba(137,135,129,0.10)", "surface": "#1a1a19",
+             "interval": "rgba(195,194,183,0.16)"},
+}
+# Sequential (one hue, light -> dark) for magnitudes such as shares in a heatmap.
+SEQUENTIAL = {
+    "light": ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"],
+    "dark": ["#0d366b", "#104281", "#184f95", "#256abf", "#3987e5", "#6da7ec", "#b7d3f6"],  # near zero recedes
 }
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 

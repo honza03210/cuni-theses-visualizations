@@ -7,12 +7,13 @@ from theme import CHROME, LESS, MORE, base_layout
 
 def trend_figure(theme, history, fit_years, fitted, train, *, expected_label, y_title, y_format, y_suffix,
                  event=None, event_label=None, ticksuffix="", highlight=None, train_label="baseline years",
-                 above=None):
+                 above=None, lower=None, upper=None):
     """A yearly series against what the baseline predicts.
 
     The actual line is red when it is above the prediction and blue when below, matching the
     colours of the overview: `above` says which, by default judged at the last year. `highlight`
-    optionally shades the compared years and `event` marks a moment with a dotted line.
+    optionally shades the compared years, `event` marks a moment with a dotted line, and
+    `lower`/`upper` draw the 95 % prediction interval around the expected line.
     """
     c = CHROME[theme]
     fig = go.Figure(layout=base_layout(theme, height=380))
@@ -30,6 +31,14 @@ def trend_figure(theme, history, fit_years, fitted, train, *, expected_label, y_
         fig.add_vline(x=event, line=dict(color=c["axis"], width=1, dash="dot"),
                       annotation_text=event_label, annotation_position="bottom right",
                       annotation_font=dict(color=c["muted"], size=12))
+    if lower is not None:
+        fig.add_trace(go.Scatter(x=fit_years, y=upper, mode="lines", line=dict(width=0), hoverinfo="skip",
+                                 showlegend=False))
+        fig.add_trace(go.Scatter(
+            x=fit_years, y=lower, mode="lines", line=dict(width=0), fill="tonexty", fillcolor=c["interval"],
+            name="95 % prediction interval", customdata=upper,
+            hovertemplate=f"95 % interval %{{y:{y_format}}}–%{{customdata:{y_format}}}{y_suffix}<extra></extra>",
+        ))
     fig.add_trace(go.Scatter(
         x=fit_years, y=fitted, mode="lines", name=expected_label,
         line=dict(color=c["muted"], width=2, dash="dash"),

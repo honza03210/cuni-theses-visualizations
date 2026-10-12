@@ -1,0 +1,10 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: cuni-theses-visualizations
+    runtime: docker
+    plan: standard  # 2 GB of memory; the app uses about 1.1 GB once every view has been opened
+    healthCheckPath: /
+    envVars:
+      - key: DASH_DEBUG
+        value: "0"
