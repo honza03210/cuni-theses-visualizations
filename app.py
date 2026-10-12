@@ -1,12 +1,16 @@
 """Dash app: interactive visualizations of Charles University bachelor theses."""
 
 import os
+import threading
 
 import dash
 from dash import Dash, Input, Output, clientside_callback, dcc, html
 
+import clouds
+
 app = Dash(__name__, use_pages=True, suppress_callback_exceptions=True, title="CUNI theses visualizations")
 server = app.server  # for WSGI servers: gunicorn app:server
+threading.Thread(target=clouds.warm, daemon=True).start()  # in the background: startup stays fast
 PAGES = list(dash.page_registry.values())
 
 

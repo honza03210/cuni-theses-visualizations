@@ -1,16 +1,13 @@
 """Words used more or less than their pre-ChatGPT trend predicts, as a word cloud."""
 
-from pathlib import Path
-
 import dash
 import numpy as np
 import plotly.graph_objects as go
 import snowballstemmer
 from dash import Input, Output, callback, clientside_callback, ctx, dash_table, dcc, html
-from PIL import Image, ImageDraw, ImageFont
-from wordcloud import WordCloud
-
 from charts import trend_figure
+from clouds import CLOUD_W, MIN_SHARES, Settings, height_for, width_bucket
+from clouds import layout as cloud_layout
 from data import FACULTIES, FIRST_YEAR
 from derived import STEMMERS
 from theme import CHROME, LESS, MORE, base_layout
@@ -21,11 +18,8 @@ from vocab import BASES, KIND, LANGUAGES, MIN_DOCS, SCALE, frequencies, last_yea
 dash.register_page(__name__, path="/vocabulary", name="AI-era vocabulary", order=1,
                    title="CUNI theses: unexpected vocabulary")
 
-FONT_PATH = str(Path(__file__).parent.parent / "assets" / "DroidSansMono.ttf")
 CLOUD_FONT = '"Droid Sans Mono", monospace'  # same face the layout is measured with, see style.css
-CLOUD_W, CLOUD_H = 1030, 560  # at full width; narrower screens get a smaller cloud with smaller words
 CHATGPT = 2022.87  # release, 30 November 2022
-MIN_SHARES = [0, 0.1, 0.5, 1, 2, 5, 10]  # minimum-use cutoffs offered, % of theses
 LAST_YEAR = last_year()
 MEASURES = {
     "absolute": "Difference from expected",
@@ -166,48 +160,29 @@ def describe(row, measure, basis, forms):
     return "<br>".join(lines)
 
 
-def cloud_figure(words, measure, basis, theme, width, forms):
+def cloud_figure(settings, scored, theme, forms):
+    """The cloud for `settings`; the word placement comes from the layout cache."""
     c = CHROME[theme]
-    width = int(max(300, min(width or CLOUD_W, CLOUD_W)))
-    height = int(max(360, CLOUD_H * width / CLOUD_W))
+    width, height = settings.width, height_for(settings.width)
     fig = go.Figure(layout=base_layout(
         theme, width=width, height=height, margin=dict(l=0, r=0, t=0, b=0), hovermode="closest",
-        hoverdistance=-1, showlegend=False,
+        hoverdistance=-1, showlegend=False, hoverlabel=dict(bgcolor=c["surface"]),
         xaxis=dict(range=[0, width], visible=False, fixedrange=True),
         yaxis=dict(range=[height, 0], visible=False, fixedrange=True),
     ))
-    if words.empty:
+    placed = cloud_layout(settings)
+    if not placed:
         return fig
-
-    scale = width / CLOUD_W
-    cloud = WordCloud(width=width, height=height, font_path=FONT_PATH, prefer_horizontal=1.0,
-                      max_font_size=max(24, int(64 * scale)), min_font_size=max(8, int(11 * scale)),
-                      relative_scaling=0.7, margin=max(3, int(6 * scale)), random_state=7, mode="RGBA",
-                      background_color=None)
-    # Lay out labels, keeping keys distinct (two stems can share a most-used form only in theory).
-    label_of = dict(zip(words.index, words.label))
-    cloud.generate_from_frequencies({label_of[k]: abs(s) for k, s in words.score.items()})
-    key_of = {label: key for key, label in label_of.items()}
-
-    draw = ImageDraw.Draw(Image.new("L", (1, 1)))
-    xs, ys, sizes, keys = [], [], [], []
-    for (label, _), size, (top, left), _, _ in cloud.layout_:
-        x0, y0, x1, y1 = draw.textbbox((0, 0), label, font=ImageFont.truetype(FONT_PATH, size), anchor="lt")
-        xs.append(left + (x1 - x0) / 2)
-        ys.append(top + (y1 - y0) / 2)
-        sizes.append(size)
-        keys.append(key_of[label])
-
-    placed = words.loc[keys]
+    keys, xs, ys, sizes = zip(*placed)
+    words = scored.loc[list(keys)]
     fig.add_trace(go.Scatter(
-        x=xs, y=ys, text=list(placed.label), mode="text", textposition="middle center",
-        textfont=dict(family=CLOUD_FONT, size=sizes,
-                      color=[MORE[theme] if s > 0 else LESS[theme] for s in placed.score]),
-        hovertext=[describe(r, measure, basis, forms.get(r.Index) if forms is not None else None)
-                   for r in placed.itertuples()],
-        hoverinfo="text", customdata=keys,
+        x=xs, y=ys, text=list(words.label), mode="text", textposition="middle center",
+        textfont=dict(family=CLOUD_FONT, size=list(sizes),
+                      color=[MORE[theme] if v > 0 else LESS[theme] for v in words.score]),
+        hovertext=[describe(r, settings.measure, settings.basis, forms.get(r.Index) if forms is not None else None)
+                   for r in words.itertuples()],
+        hoverinfo="text", customdata=list(keys),
     ))
-    fig.update_layout(hoverlabel=dict(bgcolor=c["surface"]))
     return fig
 
 
@@ -227,7 +202,9 @@ def update_cloud(lang, year, basis, measure, direction, train, n, min_share, fac
     f = frequencies(lang, facs, unit)
     scored = unexpected_words(lang, tuple(train), year, measure, basis, min_share, facs, unit)
     words = top_words(scored, n, direction)
-    fig = cloud_figure(words, measure, basis, theme, width, f.forms if unit == "stem" else None)
+    settings = Settings(lang, year, basis, measure, direction, tuple(train), n, min_share, facs, unit,
+                        width_bucket(width))
+    fig = cloud_figure(settings, scored, theme, f.forms if unit == "stem" else None)
 
     value_unit = BASES[basis][1]
     table = words[["label", "expected", "actual", "lower", "upper", "score"]].reset_index(drop=True)

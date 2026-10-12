@@ -1,6 +1,6 @@
 """Download the dataset and build every derived table, so the app starts fast.
 
-    python prepare.py            # everything (about 3 minutes and 560 MB of downloads the first time)
+    python prepare.py            # everything (about 4 minutes and 560 MB of downloads the first time)
     python prepare.py --clean    # also delete the large raw tables afterwards (for a deploy image)
 
 The app builds whatever is missing on first use, so running this is optional locally.
@@ -9,6 +9,7 @@ The app builds whatever is missing on first use, so running this is optional loc
 import sys
 import time
 
+import clouds
 import derived
 import vocab
 from data import CACHE_DIR, download
@@ -26,6 +27,7 @@ def main(clean: bool = False):
         for unit in ("word", "stem"):
             vocab.frequencies(lang, None, unit)
         print(f"cached word frequencies for {lang}")
+    print(f"laid out {clouds.prepare()} default word clouds")
     if clean:
         # The pages only read the theses table and the derived tables.
         for table in ("word_freq_by_year", "word_counts"):
